@@ -4,97 +4,127 @@ namespace App\Http\Controllers;
 
 use App\Models\Movie;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class MovieController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(Request $request)
     {
-        $movies = Movie::latest()->get();
+        $query = Movie::latest();
+
+        if (!auth()->check()) {
+            $query->where('status', '!=', 'want to watch');
+
+            if ($request->status && $request->status !== 'want to watch') {
+                $query->where('status', $request->status);
+            }
+        } else {
+            if ($request->status) {
+                $query->where('status', $request->status);
+            }
+        }
+
+        $movies = $query->get();
+
         return view('movies.index', compact('movies'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        // return view('movies.create');
-         dd('CREATE WORKS');
+        return view('movies.create');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $request->validate([
-            'title' => 'required|string|max:255',
-            'genre' => 'required|string|max:100',
-            'status' => 'required|in:want to watch,watching,completed',
-            'rating' => 'nullable|numeric|min:0|max:10',
+            'title'       => 'required|string|max:255',
+            'genre'       => 'required|string|max:100',
+            'status'      => 'required|in:want to watch,watching,completed',
+            'rating'      => 'nullable|numeric|min:0|max:10',
             'description' => 'nullable|string',
         ]);
 
+        // CEK JUDUL TANPA MEMPERHATIKAN HURUF BESAR/KECIL
+        $exists = Movie::whereRaw('LOWER(title) = ?', [strtolower($request->title)])
+            ->where('user_id', auth()->id())
+            ->exists();
+
+        if ($exists) {
+            return back()
+                ->withErrors([
+                    'title' => 'Film dengan judul ini sudah ada di daftar kamu.'
+                ])
+                ->withInput();
+        }
+
         Movie::create([
-            'title' => $request->title,
-            'genre' => $request->genre,
-            'status' => $request->status,
-            'rating' => $request->rating,
+            'title'       => $request->title,
+            'genre'       => $request->genre,
+            'status'      => $request->status,
+            'rating'      => $request->rating,
             'description' => $request->description,
-            'user_id' => auth()->id(),
+            'user_id'     => auth()->id(),
         ]);
 
         return redirect()->route('movies.index')
-        ->with('success', 'Film berhasil ditambahkan!');
+            ->with('success', 'Film berhasil ditambahkan!');
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(Movie $movie)
     {
+        if ($movie->status === 'want to watch' && auth()->id() !== $movie->user_id) {
+            abort(403, 'Film ini bersifat privat.');
+        }
+
         return view('movies.show', compact('movie'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(Movie $movie)
     {
         return view('movies.edit', compact('movie'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Movie $movie)
     {
         $request->validate([
-        'title'         => 'required|string|max:255',
-        'genre'         => 'required|string|max:100',
-        'status'        => 'required|in:want to watch,watching,completed',
-        'rating'        => 'nullable|numeric|min:0|max:10',
-        'description'   => 'nullable|string',  
+            'title'       => 'required|string|max:255',
+            'genre'       => 'required|string|max:100',
+            'status'      => 'required|in:want to watch,watching,completed',
+            'rating'      => 'nullable|numeric|min:0|max:10',
+            'description' => 'nullable|string',
         ]);
 
-        $movie->update($request->only(
-            'title', 'genre', 'status', 'rating', 'description'
-        ));
+        // CEK JUDUL TANPA MEMPERHATIKAN HURUF BESAR/KECIL
+        $exists = Movie::whereRaw('LOWER(title) = ?', [strtolower($request->title)])
+            ->where('user_id', auth()->id())
+            ->where('id', '!=', $movie->id)
+            ->exists();
 
-        return redirect()->route('movies.show', $movie)
-        ->with('success', 'Film berhasil diupdate!');
+        if ($exists) {
+            return back()
+                ->withErrors([
+                    'title' => 'Film dengan judul ini sudah ada di daftar kamu.'
+                ])
+                ->withInput();
+        }
+
+        $movie->update([
+            'title'       => $request->title,
+            'genre'       => $request->genre,
+            'status'      => $request->status,
+            'rating'      => $request->rating,
+            'description' => $request->description,
+        ]);
+
+        return redirect()->route('movies.index')
+            ->with('success', 'Film berhasil diupdate!');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Movie $movie)
     {
         $movie->delete();
+
         return redirect()->route('movies.index')
-        ->with('success', 'Film berhasil dihapus!');
+            ->with('success', 'Film berhasil dihapus!');
     }
 }

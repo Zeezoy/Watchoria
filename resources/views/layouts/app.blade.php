@@ -46,9 +46,9 @@
         Semua Film
     </a>
     @auth
-    <a href="{{ route('movies.create') }}" class="nav-item {{ request()->routeIs('movies.create') ? 'active' : '' }}">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-        Tambah Film
+    <a href="#" onclick="if(typeof openModal==='function'){event.preventDefault();openModal()}" class="nav-item">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    Tambah Film
     </a>
     @endauth
 
@@ -67,19 +67,26 @@
     </a>
 
     <div class="sidebar-bottom">
-        @auth
-            <div class="user-chip">
-                <div class="user-avatar">{{ strtoupper(substr(Auth::user()->name, 0, 2)) }}</div>
-                <span class="user-name">{{ Auth::user()->name }}</span>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" style="background:none;border:none;color:rgba(135,206,235,0.5);font-size:12px;cursor:pointer">↩</button>
-                </form>
-            </div>
-        @else
-            <a href="{{ route('login') }}" class="btn-ghost" style="width:100%;text-align:center;margin-bottom:8px;display:block">Login</a>
-            <a href="{{ route('register') }}" class="btn-primary" style="width:100%;text-align:center;display:block">Register</a>
-        @endauth
+    @auth
+        <div class="user-chip">
+            <div class="user-avatar">{{ strtoupper(substr(Auth::user()->name, 0, 2)) }}</div>
+            <span class="user-name">{{ Auth::user()->name }}</span>
+        </div>
+        <form method="POST" action="{{ route('logout') }}" style="margin-top:8px">
+            @csrf
+            <button type="submit" style="width:100%;background:rgba(226,75,74,0.12);color:#F09595;border:0.5px solid rgba(226,75,74,0.3);border-radius:8px;padding:8px;font-size:12px;cursor:pointer;transition:.15s"
+                    onmouseover="this.style.background='rgba(226,75,74,0.22)'"
+                    onmouseout="this.style.background='rgba(226,75,74,0.12)'">
+                Logout
+            </button>
+        </form>
+    @else
+        <a href="{{ route('landing') }}" style="display:block;text-align:center;margin-bottom:10px;font-size:12px;color:rgba(240,255,255,0.35);text-decoration:none">
+            ← Kembali ke Beranda
+        </a>
+        <a href="{{ route('login') }}" class="btn-ghost" style="width:100%;text-align:center;margin-bottom:8px;display:block">Login</a>
+        <a href="{{ route('register') }}" class="btn-primary" style="width:100%;text-align:center;display:block">Register</a>
+    @endauth
     </div>
 </aside>
 
@@ -92,8 +99,11 @@
 
     <div class="content">
         @if(session('success'))
-            <div class="flash">✓ {{ session('success') }}</div>
-        @endif
+    <div class="flash">{{ session('success') }}</div>
+    @endif
+    @if(session('error'))
+        <div class="flash" style="color:#F09595;background:rgba(226,75,74,0.12);border-color:rgba(226,75,74,0.3)">{{ session('error') }}</div>
+    @endif
         {{ $slot }}
     </div>
 </div>

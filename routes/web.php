@@ -3,7 +3,13 @@
 use App\Http\Controllers\MovieController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn () => redirect()->route('movies.index'));
+// Landing page untuk guest, redirect ke movies.index kalau sudah login
+Route::get('/', function () {
+    if (auth()->check()) {
+        return redirect()->route('movies.index');
+    }
+    return view('landing');
+})->name('landing');
 
 Route::get('/movies', [MovieController::class, 'index'])
     ->name('movies.index');

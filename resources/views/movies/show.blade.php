@@ -6,7 +6,7 @@
         </div>
         @auth
         <div style="display:flex;gap:8px">
-            <a href="{{ route('movies.edit',$movie) }}" class="btn-ghost">Edit</a>
+            <button onclick="openEditModal()" class="btn-ghost">Edit</button>
             <form action="{{ route('movies.destroy',$movie) }}" method="POST"
                   onsubmit="return confirm('Hapus film ini?')">
                 @csrf @method('DELETE')
@@ -29,7 +29,7 @@
                     {{ $movie->status }}
                 </span>
                 @if($movie->rating)
-                <span style="font-size:13px;color:#87CEEB">★ {{ $movie->rating }}/10</span>
+                <span style="font-size:13px;color:#87CEEB">{{ $movie->rating }}/10</span>
                 @endif
             </div>
 
@@ -53,7 +53,61 @@
         </div>
 
         <a href="{{ route('movies.index') }}" style="display:inline-block;margin-top:16px;font-size:13px;color:rgba(135,206,235,0.6);text-decoration:none">
-            ← Kembali ke daftar
+            Kembali ke daftar
         </a>
     </div>
+
+    {{-- Modal Edit --}}
+    @auth
+    <div id="editModal" onclick="if(event.target===this)closeEditModal()"
+         style="display:none;position:fixed;inset:0;z-index:999;
+                background:rgba(5,0,30,0.75);backdrop-filter:blur(6px);
+                align-items:center;justify-content:center;padding:16px">
+        <div style="background:linear-gradient(160deg,#0e0e35,#160840);
+                    border:0.5px solid rgba(135,206,235,0.2);border-radius:16px;
+                    padding:20px;width:100%;max-width:400px;
+                    max-height:90vh;overflow-y:auto;position:relative">
+
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <div>
+                    <div style="font-size:14px;font-weight:600;color:#F0FFFF">Edit Film</div>
+                    <div style="font-size:11px;color:rgba(240,255,255,0.35);margin-top:1px">{{ $movie->title }}</div>
+                </div>
+                <button onclick="closeEditModal()"
+                        style="background:rgba(240,255,255,0.06);border:0.5px solid rgba(135,206,235,0.2);
+                               border-radius:8px;width:28px;height:28px;color:rgba(240,255,255,0.5);
+                               font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+                               flex-shrink:0">
+                    X
+                </button>
+            </div>
+
+            <form action="{{ route('movies.update',$movie) }}" method="POST" style="display:grid;gap:12px">
+                @csrf @method('PUT')
+                @include('movies._form')
+                <div style="display:flex;gap:8px;padding-top:2px">
+                    <button type="submit" class="btn-primary" style="flex:1;font-size:13px;padding:8px 12px">Update Film</button>
+                    <button type="button" onclick="closeEditModal()" class="btn-ghost" style="font-size:13px;padding:8px 12px">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openEditModal() {
+            document.getElementById('editModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+        document.addEventListener('keydown', e => { if(e.key === 'Escape') closeEditModal(); });
+
+        @if($errors->any())
+            openEditModal();
+        @endif
+    </script>
+    @endauth
+
 </x-app-layout>
