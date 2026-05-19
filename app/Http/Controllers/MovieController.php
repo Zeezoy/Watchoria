@@ -4,24 +4,32 @@ namespace App\Http\Controllers;
 
 use App\Models\Movie;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class MovieController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Movie::latest();
-
+        // GUEST
         if (!auth()->check()) {
-            $query->where('status', '!=', 'want to watch');
 
-            if ($request->status && $request->status !== 'want to watch') {
+            $query = Movie::where('status', 'completed')
+                ->latest();
+
+            if ($request->status && $request->status === 'completed') {
                 $query->where('status', $request->status);
             }
-        } else {
-            if ($request->status) {
-                $query->where('status', $request->status);
-            }
+
+            $movies = $query->get();
+
+            return view('movies.index', compact('movies'));
+        }
+
+        // USER LOGIN
+        $query = Movie::where('user_id', auth()->id())
+            ->latest();
+
+        if ($request->status) {
+            $query->where('status', $request->status);
         }
 
         $movies = $query->get();
@@ -44,7 +52,7 @@ class MovieController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        // CEK JUDUL TANPA MEMPERHATIKAN HURUF BESAR/KECIL
+        // Cek judul duplikat milik user yang sama
         $exists = Movie::whereRaw('LOWER(title) = ?', [strtolower($request->title)])
             ->where('user_id', auth()->id())
             ->exists();
@@ -66,14 +74,20 @@ class MovieController extends Controller
             'user_id'     => auth()->id(),
         ]);
 
-        return redirect()->route('movies.index')
+        return redirect()
+            ->route('movies.index')
             ->with('success', 'Film berhasil ditambahkan!');
     }
 
     public function show(Movie $movie)
     {
-        if ($movie->status === 'want to watch' && auth()->id() !== $movie->user_id) {
-            abort(403, 'Film ini bersifat privat.');
+        // Kalau movie milik orang lain
+        if ($movie->user_id !== auth()->id()) {
+
+            // Hanya completed yang boleh dilihat publik
+            if ($movie->status !== 'completed') {
+                abort(403, 'Film ini bersifat privat.');
+            }
         }
 
         return view('movies.show', compact('movie'));
@@ -81,11 +95,21 @@ class MovieController extends Controller
 
     public function edit(Movie $movie)
     {
+        // Hanya pemilik movie
+        if ($movie->user_id !== auth()->id()) {
+            abort(403);
+        }
+
         return view('movies.edit', compact('movie'));
     }
 
     public function update(Request $request, Movie $movie)
     {
+        // Hanya pemilik movie
+        if ($movie->user_id !== auth()->id()) {
+            abort(403);
+        }
+
         $request->validate([
             'title'       => 'required|string|max:255',
             'genre'       => 'required|string|max:100',
@@ -94,7 +118,7 @@ class MovieController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        // CEK JUDUL TANPA MEMPERHATIKAN HURUF BESAR/KECIL
+        // Cek judul duplikat
         $exists = Movie::whereRaw('LOWER(title) = ?', [strtolower($request->title)])
             ->where('user_id', auth()->id())
             ->where('id', '!=', $movie->id)
@@ -116,15 +140,22 @@ class MovieController extends Controller
             'description' => $request->description,
         ]);
 
-        return redirect()->route('movies.index')
+        return redirect()
+            ->route('movies.index')
             ->with('success', 'Film berhasil diupdate!');
     }
 
     public function destroy(Movie $movie)
     {
+        // Hanya pemilik movie
+        if ($movie->user_id !== auth()->id()) {
+            abort(403);
+        }
+
         $movie->delete();
 
-        return redirect()->route('movies.index')
+        return redirect()
+            ->route('movies.index')
             ->with('success', 'Film berhasil dihapus!');
     }
 }

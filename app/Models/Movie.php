@@ -11,4 +11,9 @@ class Movie extends Model
     'title', 'genre', 'status', 'rating', 'description', 'user_id'
 ];
 
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
 }
